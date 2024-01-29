@@ -43,7 +43,7 @@ Member member = jpa.find(memberId) ; //조회
 ```
    
  ** **하이버네이트(hibernate)** 프레임워크: 객체 하나를 CRUD 해줄 뿐만 아니라, 
- 대부분의 패러다임 불일치 문제를 해결해주는 ORM 프레임워크
+ 대부분의 패러다임 불일치 문제를 해결해주는 ORM 프레임워크 (ORM 프레임워크는 eBean, EclipseLink 등 종류가 꽤 많다.)
    
 ## 2. JPA를 사용하는 이유
 - 생산성   
