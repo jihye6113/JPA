@@ -39,7 +39,7 @@ ResultSet을 매핑해서 객체를 조회
    
 - 객체를 조회할 때의 코드
 ```
-Member member = jpa.find (memberId) ; //조회
+Member member = jpa.find(memberId) ; //조회
 ```
    
  ** **하이버네이트(hibernate)** 프레임워크: 객체 하나를 CRUD 해줄 뿐만 아니라, 
@@ -49,13 +49,13 @@ Member member = jpa.find (memberId) ; //조회
 - 생산성   
 지루하고 반복적인 코드와 CRUD용 SQL을 자동으로 JPA가 대신 처리
    
-+ 더 나아가서 엔티티만 등록해놓으면 DDL을 자동으로 작성하여 테이블을 생성하거나 수정해주는 ddl-auto 설정을 사용해서 CREATE TABLE같은 DDL문을 자동으로 생성해주기도 한다.
+더 나아가서 엔티티만 등록해놓으면 DDL을 자동으로 작성하여 테이블을 생성하거나 수정해주는 ddl-auto 설정을 사용해서 CREATE TABLE같은 DDL문을 자동으로 생성해주기도 한다.   
 -> DB 설계 중심의 패러다임을 객체 설계 중심으로 역전시킬 수 있다 (???????)
    
 **but** 운영에서는 가급적 사용x, 만약 사용할 시에는 주의해서 사용할 것   
 ∵ create / create-drop으로 설정했을 시에는 운영DB의 테이블이 모두 삭제될 수도 있기 때문에
    
-- 유지보수
+- 유지보수   
 테이블의 필드를 추가하거나 삭제, 수정하거나, 데이터베이스를 중간에 바꾸더라도(ex. oracle -> mysql), 수정해야될 코드가 적다.
    
 ex. Member 객체에 tel 필드가 추가될 때 기존 프로세스   
@@ -75,30 +75,30 @@ ex. Member 객체에 tel 필드가 추가될 때 기존 프로세스
 3-2. 연락처의 조회결과를 Member 객체에 추가로 매핑
 ```
  String tel = rs.getString("TEL"); 
- member.setTel (tel) ; // 추가
+ member.setTel (tel); // 추가
 ```
    
 4. 수정을 위한 코드 변경   
 ```
-list.add (member); // 등록
+list.add (member);              // 등록
 Member member = list.get (xxx); // 조회
-member.setTel("xxx"); // 수정
+member.setTel("xxx");           // 수정
 ```
 -> JPA를 사용하면 일일이 할 필요 X   
    
-- 패러다임의 불일치 해결
-관계형 데이터베이스는 데이터 중심으로 구조화되어있고, 집합적인 사고를 요구한다. (??)
+- 패러다임의 불일치 해결   
+관계형 데이터베이스는 데이터 중심으로 구조화되어있고, 집합적인 사고를 요구한다. (??)   
 그리고 객체지향에서 이야기하는 추상화, 상속, 다형성 같은 개념이 없다.   
 이는 객체와 관계형 데이터베이스가 지향하는 목적이 서로 다르기 때문인데, 그렇기에 둘의 기능과 표현 방법도 다르다. => **객체와 관계형 데이터베이스의 패러다임 불일치 문제**   
 
 1. 상속   
 ![1_6.png](1_6.png)   
-객체는 상속이라는 기능을 갖고 있지만, 테이블은 상속이라는 기능이 없다.   
-
+객체는 상속이라는 기능을 갖고 있지만, 테이블은 상속이라는 기능이 없다.
 그나마 데이터베이스 모델링에서 이야기하는 슈퍼타입 서브타입 관계를 사용하면 객체 상속과 가장 유사한 형태로 테이블을 설계할 수 있다.   
 ![1_7.png](1_7.png)
 
-JDBC API를 사용해서 이 코드를 완성하려면 부모 객체에서 부모 데이터만 꺼내서 ITEM용 INSERT SQL을 작성하고 자식 객체에서 자식 데이터만 꺼내서 ALBUM용 INSRT SQL을 작성 해야하는데，작성해야 할 코드량이 만만치 않다. 그리고 자식 타입에 따라서 DTYPE도 저장해야 한다.   
+JDBC API를 사용해서 이 코드를 완성하려면 부모 객체에서 부모 데이터만 꺼내서 ITEM용 INSERT SQL을 작성하고 자식 객체에서 자식 데이터만 꺼내서 ALBUM용 INSRT SQL을 작성 해야하는데，작성해야 할 코드량이 만만치 않다.   
+그리고 자식 타입에 따라서 DTYPE도 저장해야 한다.   
    
 JPA를 사용한다면 위의 경우에도   
 ```
@@ -145,7 +145,7 @@ Member 객체는 Member.team  필드에 Team 객체의 참조를 보관해서 Te
 ```
 Team team = member.getTeam();
 ```
-처럼 참조를 통해 연관된 객체를 찾을 수 없다.   
+위처럼 참조를 통해 연관된 객체를 찾을 수 없다.   
 그렇게 된다면, 좋은 객체 모델링은 기대하기 어렵고, 결국 객체지향의 특징을 잃어버리게 된다.   
 
 **객체지향 모델링**   
@@ -159,7 +159,7 @@ Team team = member.getTeam();
 (∵ 객체 모델은 외래 키가 필요 없고, 참조만 있으면 되지만 테이블은 참조가 필요 없고 외래키만 있으면 되기 때문)   
 ∴ 개발자가 중간에서 변환 역할을 해야한다.   
 
-* 저장
+▶ 저장   
 객체를 DB에 저장하려면 team 필드를 TEAM_ID FK 값으로 변환해야된다.
 ```
 member.getId();           // MEMBER_ID PK에 저장
@@ -167,8 +167,8 @@ member.getTeam().getId(); // TEMAM_ID FK에 저장
 member.getUsername();     // USERNAME 컬럼에 저장
 ```
 
-* 조회
-조회할 때에는 TEAM_ID FK 값을 Member 객체의 team 참조로 변환해서 객체에 보관해야 한다.
+▶ 조회   
+조회할 때에는 TEAM_ID FK 값을 Member 객체의 team 참조로 변환해서 객체에 보관해야 한다.   
 먼저 아래 SQL처럼 MEMBER, TEAM을 조회한다.   
 ```
 SELECT M.*, T.*
@@ -197,9 +197,8 @@ public Member find (String member Id) {
 
 **JPA와 연관관계**   
 
-- 성능
-JPA는 애플리케이션과 DB 사이에서 다양한 성능 최적화 기회를 제공한다.
-   
+- 성능   
+JPA는 애플리케이션과 DB 사이에서 다양한 성능 최적화 기회를 제공한다.   
 ```
  String member Id = "hellold";
  Member member1 = jpa.find(memberId);
