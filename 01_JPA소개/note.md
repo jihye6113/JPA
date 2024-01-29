@@ -130,6 +130,72 @@ SELECT I.*, A.*
 객체: 참조를 사용해서 연관된 객체 조회   
 테이블: 외래키를 사용해서 연관된 테이블 조회   
 
+![1_8.png](1_8.png)   
+Member 객체는 Member.team  필드에 Team 객체의 참조를 보관해서 Team 객체와 관계를 맺는다.   
+=> Team 참조필드에 접근하면, Member와 연관된 Team 조회 가능   
+
+그러나, MEMBER 테이블은, FK인 TEAM_ID로 참조를 하고 있다.   
+외래키 TEAM_ID를 사용해서 MEMBER 테이블과 TEAM 테이블을 조인하면, MEMBER 테이블과 연관된 TEAM 테이블 조회 가능   
+
+**객체는 참조가 있는 방향으로만 조회할 수 있기 때문에, 단순 조회 시 member.getTeam()은 가능하지만, 반대로 team.getMember()는 불가능하다.   반면에 테이블은 외래키 하나로 MEMBER JOIN TEAM, TEAM JOIN MEMBER가 가능하다.**
+   
+![1_9.png](1_9.png)   
+위처럼 Team 객체가 아닌, teamId 컬럼을 사용해 Member 클래스를 만들 수도 있긴 하다.   
+이렇게 객체를 테이블에 맞춰 모델링하면 객체를 테이블에 저장하거나 조회할 때에는 편리하지만,   
+```
+Team team = member.getTeam();
+```
+처럼 참조를 통해 연관된 객체를 찾을 수 없다.   
+그렇게 된다면, 좋은 객체 모델링은 기대하기 어렵고, 결국 객체지향의 특징을 잃어버리게 된다.   
+<br/>
+**객체지향 모델링**   
+객체는 참조를 통해서 관계를 맺기 때문에 아래처럼 teamId가 아닌, Team 객체를 참조하도록 모델링해야 한다.   
+![1_10.png](1_10.png)   
+이제 아래처럼 조회가 가능해진다.   
+```
+Team team = member.getTeam();
+```
+그러나 이처럼 객체지향 모델링을 사용하면, 객체를 테이블에 저장하거나 조회하기 쉽지X   
+(∵ 객체 모델은 외래 키가 필요 없고, 참조만 있으면 되지만 테이블은 참조가 필요 없고 외래키만 있으면 되기 때문)   
+∴ 개발자가 중간에서 변환 역할을 해야한다.   
+<br/>
+* 저장
+객체를 DB에 저장하려면 team 필드를 TEAM_ID FK 값으로 변환해야된다.
+```
+member.getId();           // MEMBER_ID PK에 저장
+member.getTeam().getId(); // TEMAM_ID FK에 저장
+member.getUsername();     // USERNAME 컬럼에 저장
+```
+
+* 조회
+조회할 때에는 TEAM_ID FK 값을 Member 객체의 team 참조로 변환해서 객체에 보관해야 한다.
+먼저 아래 SQL처럼 MEMBER, TEAM을 조회한다.   
+```
+SELECT M.*, T.*
+  FROM MEMBER M
+     , TEAM T
+ WHERE M.TEAM_ID = T.TEAM_ID
+```
+<br/>
+후에는 아래처럼 객체 생성, 연관관계를 설정해서 SQL 결과를 반환한다.   
+```
+public Member find (String member Id) {
+    // SQL 실행
+   Member member = new Member();
+    // 데이터베이스에서 조회한 회원 관련 정보를 모두 입력
+   Team team = new Team();
+    // 데이터베이스에서 조회한 팀 관련 정보를 모두 입력
+    // 회원과팀 관계 설정
+   member.setTeam (team);
+
+   return member;
+}
+```
+-> 할 일이 굉장히 많다 ;;;;;; 귀찮다~~   
+하지만, 자바 컬렉션에 회원 객체를 저장한다면 이렇게 하지 않아도 됨 !   
+<br/>
+
+**JPA와 연관관계**   
 
 - 성능
 JPA는 애플리케이션과 DB 사이에서 다양한 성능 최적화 기회를 제공한다.
