@@ -196,7 +196,45 @@ public Member find (String member Id) {
 
 
 **JPA와 연관관계**   
+JPA는 위와 같은 연관관계와 관련된 패러다임의 불일치 문제를 해결해준다.   
 
+```
+member.setTeam(team); // 회원과 팀 연관관계 설정
+jpa.persist(memger);  // 회원과 연관관계 함께 저장
+```
+-> 회원과 팀의 관계를 설정하고 회원객체를 저장하면 JPA는 team의 참조를 FK로 변환, 적절한 INSERT SQL을 DB에 전달   
+
+조회할 경우에는,   
+```
+Member member = jpa.find(Member.class, memberId);
+Team team = member.getTeam();
+```
+FK를 참조로 변환하는 일도 JPA가 처리해준다.   
+
+사실 이런 경우는 쉬운 문제이고, 어려운 패러다임의 불일치 문제도 있다.   
+
+3. 객체 그래프 탐색   
+![1_11.png](1_11.png)   
+SQL을 직접 다루면 처음 실행하는 SQL에 따라 객체 그래프를 어디까지 탐색할 수 있는지가 정해진다.   
+
+```
+SELECT M.*, T.*
+  FROM MEMBER M
+     , TEAM T
+ WHERE M.TEAM_ID = T.TEAM_ID
+```
+위 쿼리를 통해서 회원과 팀에 대한 데이터만 조회한다면, 팀과 멤버의 정보는 쉽게 조회가 되지만,   
+member.getOrder(); 와 같은, 멤버와 연관된 다른 객체의 정보는 조회되지 않는다.   
+
+하지만 !!! JPA를 사용하면 객체 그래프를 마음껏 탐색할 수 있다.   
+
+member.getOrder();을 사용해 객체를 조회할 수 있을 뿐만 아니라,   
+member.getOrder().getOrderItem(); 처럼 객체의 속성까지도 조회할 수 있다.   
+
+∵ JPA는 연관된 객체를 사용하는 시점에 적절한 SELECT SQL을 실행하기 때문.   
+
+**-> 실제 객체를 사용하는 시점까지 DB 조회를 미룬다고 해서 '지연로딩'이라고 부른다.**   
+   
 - 성능   
 JPA는 애플리케이션과 DB 사이에서 다양한 성능 최적화 기회를 제공한다.   
 ```
