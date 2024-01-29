@@ -176,7 +176,7 @@ SELECT M.*, T.*
      , TEAM T
  WHERE M.TEAM_ID = T.TEAM_ID
 ```
-<br/>
+
 후에는 아래처럼 객체 생성, 연관관계를 설정해서 SQL 결과를 반환한다.   
 ```
 public Member find (String member Id) {
