@@ -78,7 +78,7 @@ em.clear();
 * 삭제
 엔티티를 영속성 컨텍스트와 데이터베이스에서 삭제한다.
 ```java
-em.remover(member);
+em.remove(member);
 ```
    
 ## 3.4 영속성 컨텍스트의 특징   
