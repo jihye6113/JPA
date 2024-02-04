@@ -230,6 +230,7 @@ SELECT m from Member m
 ```
 이게 JPQL이다.! Member는 MEMBER 테이블이 아니라, Member 객체다.   
 
-<hr>
-느낀점   
-JPQL은 DB 테이블을 전혀 알지 못한 다는 것을 기억하자 ...
+<hr/>
+   
+＊ 느낀점   
+JPQL은 DB 테이블을 전혀 알지 못한다는 것을 기억하자 ...
