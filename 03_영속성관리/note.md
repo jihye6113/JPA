@@ -180,7 +180,7 @@ transaction.begin (); // [트랜잭션] 시작
 Member member A = em.find (Member.class, "memberA");
 // 영속 엔티티 데이터 수정 
 memberA.setUsername ("hi"); 
-memberA.setAige(10);
+memberA.setAge(10);
 
 // em.update(member) 이런 코드가 있어야 하지 않을까?
  transaction.commit (); // 트랜잭션 커밋
@@ -432,8 +432,31 @@ mergeMember = 회원명변경
 em2 contains member = false    
 em2 contains mergeMember = true   
 －－－－－－－－－－－－－－－－－   
-
-
    
+![3_21.png](3_21.png)   
+[↑ 위 코드의 동작 방식]  
+   
+1. merge()를 실행한다.
+2. 파라미터로 넘어온 준영속 엔티티의 식별자 값으로 1차 캐시에서 엔티티를 조회한다.
+2-1. 만약 1차 캐시에 엔티티가 없으면 데이터베이스에서 엔티티를 조회하고, 1차 캐시에 저장한다.
+3. 조회한 영속 엔티티에 member 엔티티의 값을 채워 넣는다. (이때 "회원1" -> "회원명변경"으로 이름변경)
+4. mergeMember를 반환한다.
+   
+   
+**비영속 병합**   
+병합(merge)은 비영속 엔티티도 영속 상태로 만들 수 있다.   
+   
+병합은 파라미터로 넘어온 엔티티의 식별자 값으로 영속성 컨텍스트를 조회하고, 찾는 엔티티가 없으면 db에서 조회.   
+db에서도 발견하지 못하면, 새로운 엔티티를 생성해서 병합한다.   
+
+## 3.7 정리   
+- 엔티티 매니저는 엔티티 매니저 팩토리에서 생성한다.
+- 영속성 컨텍스트는 애플리케이션과 DB 사이에서 객체를 보관하는 가상의 DB같은 역할을 한다.
+- 일반적으로 트랜잭션을 커밋할 때 영속성 컨텍스트가 플러시 된다.
+- 영속성 컨텍스트가 해당 엔티티를 더 이상 관리하지 못하면 그 엔티티는 준영속 상태의 엔티티라 한다.
+   
+<hr>
+   
+
 궁금한 것
 프록시가 뭘까 ... (https://yarisong.tistory.com/31#google_vignette)
