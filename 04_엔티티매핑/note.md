@@ -716,3 +716,177 @@ Integer data2처럼 객체 타입일 때에만 null 값이 허용된다.
 => 그런데 int data3처럼 @Column을 사용하면 @Column은 nullable = true가 기본 값이므로, not null 제약 조건을 설정하지 않는다. (@Column 우선) =>> 자바 기본 타입에 @Column을 사용하면, nullable = false로 지정하는 것이 안전.   
    
 ### 4.7.2 @Enumerated   
+자바의 enum 타입을 매핑할 때 사용한다.   
+   
+|속성|기능|기본값|
+|-----|--------------------------|-------|
+|value|- EnumType.ORDINAL: enum 순서를 DB에 저장   - EnumType.STRING: enum 이름을 DB에 저장|EnumType.ORDINAL|
+
+```java
+enum RoleType {
+ ADMIN, USER
+}
+```
+   
+```java
+@Enumerated(EnumType.STRING) 
+private RoleType roleType;
+```
+   
+```java
+member.setRoleType(RoleType.ADMIN) ; //-> DB에 문자 ADMIN으로 저장됨
+```
+   
+- EnumType.ORDINAL은 enum에 정의된 순서대로 ADMIN은 0, USER는 1 값이 DB에 저장된다.
+  - 장점: DB에 저장되는 데이터 크기가 작다.
+  - 단점: 이미 저장된 enum의 순서를 변경할 수 없다.
+   
+- EnumType.STRING은 enum 이름 그대로 ADMIN은 'ADMIN', USER는 'USER'라는 문자로 데이터베이스에 저장된다.
+  - 장점: 저장된 enum의 순서가 바뀌거나 enum이 추가되어도 안전하다.
+  - 단점: DB에 저장되는 데이터 크기가 ORDINAL에 비해서 크다.
+    
+### 4.7.3 @Temporal   
+날짜 타입(java.util.Date, java.util.Calendar)을 매핑할 때 사용한다.   
+   
+|속성|기능|기본값|
+|-----|----------------|-------|
+|value|- TemporalType.DATE: 날짜, DB date 타입과 매핑(ex. 2024-02-12)
+- TemporalType.TIME: 시간, DB time 타입과 매링 (ex. 11:11:11)
+- TemporalTepe.TIMESTAMP: 날짜와 시간, DB timestamp 타입과 매핑(ex. 2024-02-12 11:!1:11)
+|temporalTepe은 필수로 지정해야 한다.|
+   
+```
+@Temporal(TemporalType.DATE) 
+private Date date; //날짜
+
+@Temporal(TemporalType.TIME) 
+private Date time; //시간
+
+@Temporal(TemporalType.TIMESTAMP) 
+private Date timestamp; //날짜와 시간
+
+//== 생성된 DDL==// 
+date date, 
+time time,
+timestamp timestamp,
+```
+자바의 Date 타입에는 년월일 시분초가 있지만 데이터베이스에는 date(날짜),time(시간),timestamp (날짜와 시간)라는 세 가지 타입이 별도로 존재한다.   
+©Temporal을 생략하면 자바의 Date와 가장 유사한 timestamp로 정의된다.   
+＊ DB 방언에 따라 다르게 생성 된다.
+- datetime: MySQL
+- timestamp: H2, 오라클, PostgreSQL
+   
+### 4.7.4 @Lob   
+데이터베이스 BLOB, CLOB 타입과 매핑한다.   
+   
+@Lob에는 지정할 수 있는 속성이 없다. 대신에 매핑하는 필드 타입이 문자면 CLOB으로 매핑 하고 나머지는 BLOB으로 매핑 한다.   
+- CLOB: String, char[], java.sql.CLOB   
+- BLOB: byte [ ], java.sql.BLOB   
+   
+```
+@Lob
+private String lobString;
+@Lob
+private byte[] lobByte;
+
+// 생성된 DDL은 다음과 같다.
+// 오라클
+lobString clob, 
+lobByte blob,
+
+// MySQL
+lobString longtext,
+lobByte longblob,
+
+// PostgreSQL 
+lobString text, 
+lobByte oid,
+```
+   
+### 4.7.5 @Transient   
+이 필드는 매핑하지 않는다. 따라서 DB에 저장하지 않고 조회하지도 않는다. 객체에 임시로 어떤 값을 보관하고 싶을 때 사용한다.   
+   
+```java
+ @Transient
+ private Integer temp;
+```
+
+### 4.7.6 @Access   
+JPA가 엔티티 데이터에 접근하는 방식을 지정한다.   
+   
+- 필드 접근: AccessType.FIELD로 지정한다. 필드에 직접 접근한다. 필드 접근 권한이 private여도 접근할 수 있다.
+- 프로퍼티 접근: AccessType.PROPERTY로 지정한다. 접근자(Getter)를 사용한다.
+   
+@Access를 설정하지 않으면 @Id의 위치를 기준으로 접근 방식이 설정된다.   
+   
+```java
+@Entity
+@Access(AccessType.FIELD)
+public class Member {
+   @Id
+   private String id;
+
+   private String datal; 
+   private String data2;
+   ...
+}
+```
+[↑ 필드 접근 코드]   
+@Id가 필드에 있으므로 @Access(AccessType.FIELD)로 설정한 것과 같다. => @Access는 생략해도 된다.  
+   
+```java
+@Entity
+@Access(AccessType.PROPERTY)
+public class Member {
+   private String id;
+
+   private String datal; 
+   private String data2;
+
+   @Id
+   public String getld() {
+      return id;
+   }
+
+   @Column
+   public String getDatal() { 
+      return datal;
+   }
+
+   public String getData2() { 
+      return data2;
+   }
+}
+```
+[↑ 프로퍼티 접근 코드]   
+@Id가 프로퍼티에 있으므로 @Access(AccessType.PROPERTY)로 설정한 것과 같다. => @Access는 생략해도 된다.  
+
+```java
+@Entity
+public class Member {
+   @Id
+   private String id;
+
+   @Transient
+   private String firstName;
+
+   @Transient
+   private String lastName;
+
+   @Id
+   public String getld() {
+      return id;
+   }
+
+   @Access(AccessType.PROPERTY)
+   public String getFullName() {
+      return firstName + lastName;
+   }
+   ...
+}
+
+```
+@Id가 필드에 있으므로 기본은 필드 접근 방식을 사용하고 getFullName()만 프로퍼티 접근 방식을 사용한다.   
+=> 회원 엔티티를 저장하면 회원 테이블의 FULLNAME 컬럼에 firstName + lastName 결과가 저장된다.   
+
+   
