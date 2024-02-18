@@ -348,8 +348,8 @@ em.persist(board);
 ＋ 기본 키 직접 할당 전략에서 식별자 값 없이 저장하면 예외가 발생하는데, 어떤 예외가 발생하는지 JPA 표준에는 정의되어 있지 않다.   
 하이버네이트를 구현체로 사용하면 JPA 최상위 예외인 javax.persistence.PersistenceException 예외가 발생하는데, 내부에 하이버네이트 예외인 org.hibernate.id.identifireGenerationException 예외를 포함하고 있다.   
    
-### 4.6.2 IDENTIFY 전략   
-IDENTIFY는 기본 키 생성을 DB에 위임하는 전략이다. 주로 MySQL, PostgreSQL, SQL Server, DB2에서 사용한다.   
+### 4.6.2 identity 전략   
+identity는 기본 키 생성을 DB에 위임하는 전략이다. 주로 MySQL, PostgreSQL, SQL Server, DB2에서 사용한다.   
 
 ```SQL
 CREATE TABLE BOARD (
@@ -391,15 +391,15 @@ private static void logic(EntityManager em) {
    
 <hr/>
    
-＋ IDENTIFY 전략과 최적화   
-IDENTIFY 전략은 DB에 INSERT를 한 후에 기본 키 값을 조회할 수 잆다.   
+＋ identity 전략과 최적화   
+identity 전략은 DB에 INSERT를 한 후에 기본 키 값을 조회할 수 잆다.   
 따라서 엔티티에 식별자 값을 할당하려면 JPA는 추가로 데이터베이스를 조회해야 한다.
 JDBC3에서 추가된 Statement.getGeneratedKeys()를 사용하면 데이터를 저장하면서 동시에 생성된 기본 키 값도 얻어올 수 있다. 하이버네이트는 이 메서드를 사용해서 DB와 한 번만 통신한다.
 
    
 <hr/>
    
-＋ 엔티티가 영속 상태가 되려면 식별자가 반드시 필요하다. 그런데 **IDENTIFY 식별자 생성 전략은 엔티티를 DB에 저장해야 식별자를 구할 수 있으므로** em.persist()를 호출하는 즉시 INSERT SQL이 DB에 전달된다. 따라서 이 전략은 트랜잭션을 지원하는 **쓰기 지연이 동작하지 않는다.**   
+＋ 엔티티가 영속 상태가 되려면 식별자가 반드시 필요하다. 그런데 **identity 식별자 생성 전략은 엔티티를 DB에 저장해야 식별자를 구할 수 있으므로** em.persist()를 호출하는 즉시 INSERT SQL이 DB에 전달된다. 따라서 이 전략은 트랜잭션을 지원하는 **쓰기 지연이 동작하지 않는다.**   
    
 ### 4.6.3 SEQUENCE 전략   
 데이터베이스 시퀀스: 유일한 값을 순서대로 생성하는 DB 오브젝트   
@@ -570,7 +570,7 @@ JPA 표준 명세에서는 table, pkColumnName, valueColumnName의 기본값을 
 TABLE 전략은 값을 조회하면서 SELECT 쿼리를 사용하고 다음 값으로 증가시키기 위해 UPDATE 쿼리를 사용한다. 이 전략은 SEQUENCE 전략과 비교해서 DB와 한 번 더 통신하는 단점이 있다. TABLE 전략을 최적화하려면 @TableGenerator.allocationSize를 사용하면 된다. 이 값을 사용해서 최적화하는 방법은 SEQUENCE 전략과 같다.
    
 ### 4.6.5 AUTO 전략   
-GenerationType.AUTO는 선택한 DB 방언에 따라 IDENTIFY, SEQUENCE, TABLE 전략 중 하나를 자동으로 선택한다.
+GenerationType.AUTO는 선택한 DB 방언에 따라 identity, SEQUENCE, TABLE 전략 중 하나를 자동으로 선택한다.
    
 ```java
 @Entity
