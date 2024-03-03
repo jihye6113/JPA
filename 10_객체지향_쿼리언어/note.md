@@ -715,3 +715,59 @@ SQL에 DISTINCT가 추가 되지만, SQL에서는 효과가 없음
    
 페치 조인은 성능 최적화에 상당히 유용하지만 여러 테이블에서 필요한 필드들만 조회해서 DTO로 반환하는 것이 더 효과적일 수도~   
    
+### 10.2.8 경로 표현식   
+: 쉽게 이야기 해서 .(점)을 찍어 객체 그래프를 탐색하는 것   
+   
+```
+ select m.username 
+from Member m
+ join m.team t 
+join m.orders o 
+where t.name = '팀A'
+```
+-> m.username, m.team, m.orders, t.name이 경로 표현식을 사용한 예   
+   
+- 상태 필드: 단순히 값을 저장하기 위한 필드
+- 연관 필드: 연관관계를 위한 필드, 임베디드 타입 포함
+  - 단일 값 연관 필드: @ManyToOne, @OneToOne 대상이 엔티티
+  - 컬렉션 값 연관 필드: @OneToMany, @ManyToMany 대상이 컬렉션
+   
+```java
+@Entity
+public class Member {
+  @Id @GeneratedValue 
+  private Long id;
+
+  @Column (name = "name")
+  private String username; //상태 필드
+  private Integer age; //상태 필드
+
+  @ManyToOne(..)
+  private Team team; // 연관 필드 (단일 값 연관 필드)
+
+  @OneToMany(..)
+  private List<Order> orders; // 연관 필드(컬렉션 값 연관 필드)
+```
+- 상태 필드: t.username, t.age
+- 단일 값 연관 필드: m.team
+- 컬렉션 값 연관 필드: m.orders
+   
+#### 경로 표현식과 특징   
+- 상태 필드 경로: 경로 탐색의 끝이다. 더는 탐색할 수 없다.
+- 단일 값 연관 경로: 묵시적으로 내부 조인이 일어난다. 단일 값 연관 경로는 계속 탐색할 수 있다.
+- 컬렉션 값 연관 경로: 묵시적으로 내부 조인이 일어난다. 너는 탐색할 수 없다. 단 FROM절에서 조인을 통해 별칭을 얻으면 별칭으로 탐색할 수 있다.
+   
+#### 경로 탐색을 사용한 묵시적 조인 시 주의사항   
+- 항상 내부 조인이다.
+- 컬렉션은 경로 탐색의 끝이다. 컬렉션에서 경로 탐색을 하려면 명시적으로 조인해서 별칭을 얻어야 한다.
+- 경로 탐색은 주로 SELECT, WHERE절에서 사용하지만 묵시적 조인으로 인해 SQL의 FROM절에 영향을 준다.
+   
+### 10.2.9 서브 쿼리   
+JPQL에서의 서브쿼리는 WHERE, HAVING절에서만 사용 가능   
+   
+![image.jpg1](./images/10_12.JPG)   
+![image.jpg1](./images/10_13.JPG)   
+   
+### 10.2.10 조건식   
+![image.jpg1](./images/10_14.JPG)   
+![image.jpg1](./images/10_15.JPG)   
