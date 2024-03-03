@@ -485,4 +485,233 @@ query.getResultList();
 orderby_절 ::= ORDER BY {상태필드 경로 | 결과 변수 [ASC | DESC]}+ 
 ```
    
-### 10.2.6 JPQL 조인
+### 10.2.6 JPQL 조인   
+### 내부 조인   
+(INNER) JOIN 사용   
+```java
+String teamName = "팀A";
+String query = "SELECT m FROM Member m INNER JOIN m.team t "
++ "WHERE t.name = : teamName";
+
+List<Member> members = em.createQuery(query, Member.class)
+ .setParameter("teamName", teamName)
+ .getResultList();
+```
+
+```java
+// JPQL
+ SELECT m
+ FROM Member m INNER JOIN m.team t
+ where t.name = :teamName
+```
+
+```SQL
+// SQL
+SELECT
+ M.ID AS ID,
+ M.AGE AS AGE,
+ M.TEAM_ID AS TEAM_ID,
+ M.NAME AS NAME
+FROM
+ MEMBER M INNER JOIN TEAM T ON M.TEAM_ID=T.ID 
+WHERE
+ T.NAME=?
+```
+   
+JPQL 조인은 연관 필드를 사용한다는 특징이 있다.   
+- FROM Member m: 회원을 선택하고 m이라는 별칭을 주었다.
+- Member m JOIN m.team t: 회원이 가지고 있는 연관 필드로 팀과 조인한다. 조인한 팀에는 t라는 별칭을 주었다.
+   
+JPQL은 JOIN 명령어 다음에 조인할 객체의 연관 필드를 사용한다.   
+```
+FROM Member m JOIN Team t // 잘못된 JPQL 조인, 오류
+```
+   
+#### 외부 조인   
+OUTER 생략 가능
+```java
+ SELECT m
+ FROM Member m LEFT [OUTER] JOIN m.team t
+```
+   
+```java
+SELECT
+ M.ID AS ID,
+ M.AGE AS AGE,
+ M.TEAM_ID AS TEAM_ID,
+ M.NAME AS NAME
+FROM
+ MEMBER M LEFT OUTER JOIN TEAM T ON M.TEAM_ID=T.ID 
+WHERE
+ T.NAME=?
+```
+   
+### 컬렉션 조인   
+일대다 관계 OR 다대다 관계처럼 컬렉션을 사용하는 곳에 조인하는 것   
+   
+- [회원 -> 팀] 다대일 조인, 단일 값 연관 필드(m.team)를 사용
+- [팀 -> 회원] 일대다 조인, 컬렉션 값 연관 필드(m.members)를 사용
+   
+```java
+ SELECT t, m FROM Team t LEFT JOIN t.members m
+```
+   
+### 세타 조인   
+세타 조인은 내부 조인만 지원, WHERE 절을 사용해서 할 수 있다.   
+전혀 관계 없는 엔티티 조인 가능.
+   
+```java
+//JPQL
+select count(m) from Member m, Team t 
+where m.username = t.name
+
+//SQL
+SELECT COUNT(M.ID)
+FROM
+ MEMBER M CROSS JOIN TEAM T 
+WHERE
+ M.USERNAME=T.NAME
+```
+[↑ 회원 이름이 팀 이름과 똑같은 사람 수를 구하는 예]   
+   
+### JOIN ON 절(JPA 2.1)   
+JPA 2.1부터 조인할 떄 ON 절을 지원한다. ON절을 사용하면 조인 대상을 필터링하고 조인할 수 있다.   
+보통 ON절은 외부조인에서만 사용한다.   
+```java
+// JPQL
+select m,t from Member m
+left join m.team t on t.name = 'A'
+
+//SQL
+SELECT m.*, t.* FROM Member m
+LEFT JOIN Team t ON m.TEAM ID=t.id and t.name='A'
+```
+and t.name = 'A'로 조인 시점에 조인 대상을 필터링한다.   
+   
+### 10.2..7 페치 조인   
+JPQL에서 성능 최적화를 위해 제공하는 기능으로 연관된 엔티티, 컬렉션을 한 번에 조회하는 기능   
+   
+```
+페치 조인 ::= [ LEFT [OUTER] | INNER ] JOIN FETCH 조인경로
+```
+   
+#### 엔티티 페치 조인   
+페치 조인을 사용해서 회원 엔티티를 조회하면서 연관된 팀 엔티티도 함께 조회   
+```java
+ select m
+   from Member m join fetch m.team
+```
+join 다음에 jetch를 적어서 연관된 엔티티, 컬렉션을 함꼐 조인   
+-> 회원(m)과 팀(m.team)을 함께 조회   
+   
+＋ 보통은 m.team 다음에 t처럼 별칭을 주는데, 페치 조인은 별칭 사용x   
+   
+```sql
+SELECT M .*, T.*
+  FROM MEMBER T
+ INNER JOIN TEAM T ON M.TEAM_ID=T.ID
+```
+   
+![image.jpg1](./images/10_5.JPG)   
+![image.jpg1](./images/10_6.JPG)   
+   
+select m으로 회원 엔티티만 선택했는데, 회원과 연관된 팀도 함께 조회됨   
+   
+```java
+String jpql = "select m from Member m join fetch m.team";
+
+List<Member> members = em.createQuery(jpql, Member.class) 
+  .getResultList();
+
+for (Member member : members) {
+  //페치 조인으로 회원과 팀을 함께 조회해서 지연 로딩 발생 안 함 
+  System.out.println("username = " + member.getUsername() + ", " +
+    "teamname = " + member.getTeam().name());
+}
+```
+[↑ 페치 조인 사용]   
+
+== 출력결과 ==   
+username = 회원1, teamname = 팀A   
+username = 회원2, teamname = 팀A   
+username = 회원3, teamname = 팀B   
+   
+연관된 팀 엔티티는 프록시가 아닌 실제 엔티티다. -> 연관된 팀을 사용해도 지연 로딩 일어나지 x   
+회원 엔티티가 준영속 상태가 되어도 연관된 팀을 조회할 수 있다. (?? 준영속인데 어케 조회??)   
+   
+#### 컬렉션 페치 조인   
+일대다 컬렉션 페치 조인   
+```
+ select t
+ from Team t join fetch t.members
+ where t.name = ，팀 A，
+```
+   
+```sql
+SELECT T.*, M.*
+ FROM TEAM T
+ INNER JOIN MEMBER M ON T.ID=M.TEAM_ID 
+WHERE T.NAME = '팀A'
+```
+![image.jpg1](./images/10_7.JPG)   
+![image.jpg1](./images/10_8.JPG)   
+
+(TEAM 테이블에서는 결과에 맞는 값이 하나지만 MEMBER 테이블과 조인함으로써 2건으로 조회됨)   
+   
+＋ 일대다 조인은 결과가 증가할 수 있지만 일대일, 다대일 조인은 결과가 증가X   
+   
+```
+String jpql = "select t from Team t join fetch t.members where t.name = '팀A'"; 
+List<Team> teams = em.createQuery(jpql, Team.class).getResultList();
+
+for(Team team : teams) {
+  System.out.println (T.teamname = " + team.getName () + ", 
+  team = " + team);
+
+  for (Member member : team.getMembers()) {
+  // 페치 조인으로 팀과 회원을 함께 조회해서 지연 로딩 발생 안 함 
+  System.out.println(
+   "-> username = " + member.getUsername() + ", 
+    member = " + member);
+  }
+}
+```
+[↑ 컬렉션 페치 조인 사용]   
+   
+== 출력결과 ==   
+![image.jpg1](./images/10_9.JPG)   
+-> 같은 '팀A'가 2건 조회됨   
+   
+#### 페치 조인과 DISTINCT   
+```
+ select distinct t
+ from Team t join fetch t.members
+ where t.name = ，팀 A，
+```
+SQL에 DISTINCT가 추가 되지만, SQL에서는 효과가 없음   
+   
+![image.jpg1](./images/10_10.JPG)   
+애플릴케이션에서 distinct를 보고 중복된 데이터를 걸러낸다.   
+＊ select distinct t의 의미는 팀 엔티티의 중복을 제거하라는 것   
+->   
+![image.jpg1](./images/10_11.JPG)   
+   
+#### 페치 조인의 특징과 한계   
+페치 조인을 사용하면 SQL 한 번으로 연관된 엔티티들을 함께 조회할 수 있어 SQL 호출 횟수를 줄여 성능 최적화 가능   
+   
+엔티티에 직접 적용하는 로딩 전략인 글로벌 로딩 전략을 지연 로딩으로 설정해도 JPQL에서 페이 조인을 사용하면 페치 조인을 적용해서 함께 조회됨   
+```
+ @0neToMany (fetch = FetchType.LAZY) / / 글로벌 로딩 전략
+```
+   
+한꺼번에 안쓴느 엔티티까지 조회하면 .. 너무 비효율적이니   
+글로벌 로딩 전략은 될 수 있으면 지연 로딩을 사용하고, 최적화가 필요하면 페치 조인을 적용하라 !   
+   
+－ 페치 조인의 한계   
+1. 페치 조인 대상에는 별칭을 줄 수 없다.
+- SELECT, WHERE절, 서브쿼리에 페치조인 대상 사용 불가능
+2. 둘 이상의 컬렉션 페치 불가능
+3. 컬렉션을 페치 조인하면 페이징 API(setFirstResult, setMaxResult)를 사용할 수 없다.
+   
+페치 조인은 성능 최적화에 상당히 유용하지만 여러 테이블에서 필요한 필드들만 조회해서 DTO로 반환하는 것이 더 효과적일 수도~   
+   
