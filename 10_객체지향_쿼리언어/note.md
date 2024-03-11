@@ -1287,3 +1287,56 @@ Query nativeQuery = em.createNativeQuery(sql, Member.class)
 네이티브 SQL은 관리하기 쉽지 않고 자주 사용하면 특정 데이터베이스에 종속적인 쿼리가 증가해서 이식성이 떨어진다.   
 하지만 아예 사용하지 않는 것은 불가능하고, 차선책으로 사용하도록 하자.   
    
+### 10.5.5 스토어드 프로시저(JPA 2.1)   
+JPA 2.1부터 스토어드 프로시저를 지원한다.   
+    
+## 10.6 객체지향 쿼리 심화   
+### 10.6.1 벌크 연산   
+벌크 연산: 여러 건을 한 번에 수정하거나 사용하는 연산   
+EX. 재고가 10개 미만인 모든 상품의 가격을 10% 상승시키기   
+```java
+// UPDATE 벌크 연산
+String qlString =
+ "update Product p " +
+ "set p.price = p.price * 1.1 " +
+ "where p.stockAmount < :stockAmount";
+
+int resultCount = em.createQuery(qlString)
+                   .setParameter("stockAmount", 10) 
+                    .executeUpdate();
+```
+벌크 연산은 excuteUpdate() 메서드를 사용한다.   
+return은 벌크 연산으로 영향을 받은 엔티티 건수를 반환   
+   
+ex. 가격이 100원 미만인 상품을 삭제하는 코드   
+```java
+// DELETE 벌크 연산
+String qlString =
+ "delete from Product p " +
+ "where p.price < :price";
+
+int resultCount = em.createQuery(qlString)
+                     .setParameter("price", 100) 
+                     .executeUpdate();
+```
+
+벌크 연산 시에는 벌크 연산이 영속성 컨텍스트를 무시하고 데이터베이스에 직접 쿼리한다는 점에서 주의해야 한다.   
+![image.jpg1](./images/10_18.JPG)   
+![image.jpg1](./images/10_19.JPG)   
+![image.jpg1](./images/10_20.JPG)   
+   
+벌크연산의 문제점을 피하기 위한 방법   
+1. em.refresh() 사용
+2. 벌크 연산 먼저 실행
+3. 벌크 연산 수행 후 영속성 컨텍스트 초기화
+   
+### 10.6.2 영속성 컨텍스트와 JPQL   
+쿼리 후 영속 상태인 것과 아닌 것   
+   
+## 10.7 정리   
+- JPQL은 SQL을 추상화해서 특정 데이터베이스 기술에 의존하지 않는다.
+- Criteria나 QueryDSL은 JPQL을 만들어주는 빌더 역할을 할 뿐이므로 핵심은 JPQL을 잘 알아야 한다.
+- Criteria나 QueryDSL을 사용하면 동적으로 변하는 쿼리를 편리하게 작성할 수 있다.
+- Criteria는 JPQ가 공식 지원하는 기능이지만 직관적이지 않고 사용하기에 불편하다. 반면에 QueryDSL은 JPA가 공식 지원하는 기능은 아니지만 직관적이고 편리하다.
+- JPA도 네이티브 SQL을 제공하므로 직접 SQL을 사용할 수 있다. 하지만 특정 데이터베이스에 종속적인 SQL을 사용하면 다른 데이터베이스로 변경하기 쉽지 않다. 따라서 최대한 JPQL을 사용하고 그래도 방법이 없을 때 네이티브 SQL을 사용하자.
+- JPQL은 대량에 데이터를 수정하거나 삭제하는 벌크 연산을 지원한다.
