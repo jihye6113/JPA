@@ -771,3 +771,389 @@ JPQL에서의 서브쿼리는 WHERE, HAVING절에서만 사용 가능
 ### 10.2.10 조건식   
 ![image.jpg1](./images/10_14.JPG)   
 ![image.jpg1](./images/10_15.JPG)   
+
+---------------------------------
+## 10.4 QueryDSL   
+- JPA Criteria의 장점
+  - 문법 오류를 컴파일 단계에서 잡을 수 있다.
+  - IDE 자동완성 기능의 도움을 받을 수 있다.
+   
+- JPA Criteria의 단점
+  - 너무 복잡하고 어렵다
+   
+=> 쿼리를 문자가 아닌 코드고 작성해도, 쉽고 간결하며 그 모양도 쿼리와 비슷하게 개발할 수 있는 **Query DWL**을 사용하게됨.   
+   
+QueryDSL은 오픈소스 프로젝트다.   
+   
+### 10.4.1 QueryDSL 설정   
+필요 라이브러리   
+```xml
+<!--pom.xml 추가-->
+<dependency>
+  <groupId>com.mysema.querydsl</groupId>
+  <artifactld>querydsl-jpa</artifactld>
+  <version>3.6.3</version〉
+</dependency>
+
+<dependency>
+  <groupId>com.mysema.querydsl</groupId>
+  <artifactld>querydsl-apt</artifactld> 
+  <version>3.6.3</version> 
+  <scope>provided</scope>
+</dependency〉
+```
+- querydsl-jpa: QueryDSL JPA 라이브러리
+- querydsl-apt: 쿼리 타입(Q)을 생성할 때 필요한 라이브러리
+   
+환경설정   
+QueryDSL을 사용하려면 엔티티를 기반으로 쿼리타입이라는 쿼리용 클래스를 생성해야 한다.   
+   
+```xml
+<!--쿼리 타입 생성용 pom.xml 추가-->
+<build>
+  <plugins>
+    <plugin>
+      <groupId>com.mysema.maven</groupId> 
+      <artifactld>apt-maven-plugin</artifactld>
+      <version>l.1.3</version>
+      <executions>
+        <execution>
+        <goals>
+         <goal>process</goal>
+         </goals>
+         <configuration>
+          <outputDirectory>target/generated-sources/java 
+          </outputDirectory>
+          <processor>com.mysema.query.apt.jpa.JPAAnnotation
+       Processor</processor>
+          </configuration〉
+        </execution>
+      </executions>
+   </plugin>
+ </plugins>
+</build>
+```
+콘솔에서 mvn compile을 입력하면 outputDirectory에 지정한 target/generated-souces 위치에 QMember.java처럼 Q로 시작하는 쿼리 타입들이 생성된다.   
+   
+### 10.4.2 시작   
+```java
+// QueryDSL 시작
+public void queryDSL() {
+  EntityManager em = emf.createEntityManager();
+  JPAQuery query = new JPAQuery(em); // 엔티티 매니저를 생성자에 넘겨준다.
+  QMember qMember = new QMember ("m") ; // 생성되는 JPQL의 별칭이 m 
+  List<Member> members = 
+    query.from(qMember)
+       .where(qMember.name.eq("회원l"))
+       .orderBy(qMember.name.desc())
+       .list(qMember);
+}
+```
+
+- 기본 Q 생성   
+쿼리 타입(Q)은 사용하기 편리하도록 기본 인스턴스를 보관하고 있다.   
+하지만 같은 엔티티를 조인하거나 같은 엔티티를 서브쿼리에 사용하면 같은 별칭이 사용되므로 이때는 별칭을 직접 지정해서 사용해야 한다.   
+![image.jpg1](./images/10_16.JPG)
+   
+### 10.4.3 검색 조건 쿼리   
+```java
+JPAQuery query = new JPAQuery(em);
+Qltem item = QItern.item;
+Listcitem〉 list = query.from(item)
+  .where (item.name.eq("좋은상품").and(item.price.gt(20000))) 
+  .list (item) ; //조회할 프로젝션 지정
+```
+->
+```
+select item 
+from Item item
+where item.name = ?1 and item.price > ?2
+```
+
+QueryDSL의 where절에는 and나 or를 사용할 수 있다.   
+또한 다음처럼 여러 검색 조건을 사용해도 되고, 이때는 and 연산이 된다.   
+```
+ .where (item.name.eq("좋은상품"), item.price.gt(20000))
+```
+   
+＋ 코드로 작성되어 있으므로 IDE가 제공하는 코드 자동 완성 기능의 도움을 받으면 필요한 메서드를 손쉽게 찾을 수 있다.   
+   
+### 10.4.4 결과 조회   
+쿼리 작성이 끝나고 결과 조회 메서드를 호출하면 실제 DB를 조회한다.   
+보통 uniqueResult()나 list()를 사용하고 파라미터로 프로젝션 대상을 넘겨준다.   
+   
+- 결과 조회 메서드
+  - uniqueResult(): 조회 결과가 한 건일 때 사용한다. 조회 결과가 없으면 null을 반환하고, 결과가 하나 이상이면 com.mysema.query.NonUniqueResultException 예외 발생
+  - singleResult(): uniqueResult()와 같지만 결과가 하나 이상이면 처음 데이터를 반환한다.
+  - list(): 결과가 하나 이상일 때 사용한다. 결과가 없으면 빈 컬렉션을 반환한다.
+   
+### 10.4.5 페이징과 정렬   
+```java
+Qltem item = QItern.item;
+
+query.from(item)
+ .where(item.price.gt(20000))
+ .orderBy(item.price.desc(), item.stockQuantity.asc()) 
+ .offset(10).limit(20) // 10번부터 20개까지
+ .list(item);
+```
+   
+```java
+QueryModifiers queryModifiers = new QueryModifiers (20L, 10L) ; //limit, offset 20건의 결과를 가져오되, 10건을 건너뛰어 시작
+List<Item> list = 
+  query.from(item)
+  .restrict(queryModifiers)
+  .list(item);
+```
+QueryModifiers: 쿼리에 대한 제약 조건을 정의하는 데 사용되는 클래스   
+   
+```java
+SearchResults<Item> result = 
+  query.from(item)
+    .where(item.price.gt(10000))
+    .offset(10).limit(20)
+    .listResults(item);
+
+long total = result.getTotal () ; // 검색된 전체 데이터 수 
+long limit = result.getLimit(); 
+long offset = result.getOffset();
+List<item> results = result.getResults (); // 조회된 데이터
+```
+listResult(): 전체 데이터 조회를 위한 count 쿼리를 한 번 더 실행   
+   
+### 10.4.6 그룹   
+```java
+query, from (item)
+  .groupBy(item.price)
+  .having(item.price.gt(1000)) 
+  .list(item);
+```
+groupBy, having 사용   
+   
+### 10.4.7 조인   
+조인은 innserJoin(Join), leftJoin, rightJoin, fullJoin 뿐만 아니라 성능 최적화를 위한 fetchJoin도 사용할 수 있다.   
+   
+조인의 기본 문법   
+1. 파라미터에 조인 대상을 지정
+2. 파라미터에 별칭으로 사용할 쿼리 타입을 지정
+   
+```java
+// 기본 조인
+QOrder order = QOrder.order;
+QMember member = QMember.member;
+QOrderItem orderltem = QOrderltem.orderItem;
+
+query.from(order)
+ .join(order.member, member)
+ .leftJoin(order.orderltems, orderltem) 
+.list(order);
+```
+   
+```java
+// 조인 on 사용
+query.from(order)
+  .leftJoin(order.orderltems, orderltem) 
+  .on(orderltem.count.gt(2))
+  .list(order);
+```
+   
+```java
+query.from(order)
+  .innerJoin(order.member, member).fetch()
+  .leftJoin(order.orderltems, orderltem).fetch()
+  .list(order);
+```
+   
+```java
+// 세타 조인(특정한 조인 조건을 사용하지 않고 두 테이블의 모든 행을 결합)
+QOrder order = QOrder.order; 
+QMember member = QMember.member;
+
+query.from(order, member)
+  .where(order.member.eq(member)) 
+  .list(order);
+```
+
+### 10.4.8 서브 쿼리   
+com.mysema.query.jpa.JPASubQuery를 생성해서 사용   
+서브쿼리의 결과가 하나면 unique(), 여러 건이면 list()를 사용할 수 있다.   
+   
+```java
+// 서브쿼리 예제 - 한 건
+Qltem item = Qltem.item;
+Qltem itemSub = new Qltem ("itemSub");
+
+query, from(item)
+  .where(item.price.eq(
+     new JPASubQuery().from(itemSub).unique(itemSub.price.max())
+   ))
+ .list(item);
+```
+   
+```
+SELECT item
+FROM Item item
+WHERE item.price = (
+    SELECT MAX(itemSub.price)
+    FROM Item itemSub
+);
+```
+   
+```java
+// 서브쿼리 예제 - 여러 건
+Qltem item = Qltem.item;
+Qltem itemSub = new Qltem("itemSub") ;
+
+query.from(item)
+  .where(item.in(
+     new JPASubQuery().from(itemSub)
+       .where(item.name.eq(itemSub.name)) 
+       .list(itemSub)
+     ))
+   .list(item);
+```
+   
+### 10.4.9 프로젝션과 결과 반환   
+프로젝션: select절에 조회 대상을 지정하는 것   
+   
+```java
+// 프로젝션 대상이 하나
+Qltem item = QItern.item;
+List<String> result = query.from(item).list(item.name);
+
+for (String name : result) {
+ System.out.println("name = " + name);
+}
+```
+   
+```java
+// 여러 필드를 프로젝션 대상으로 선택한다면, 튜플을 사용한다.
+// 튜플 사용 예제
+Qltem item = Qltem.item;
+
+List<Tuple> result = query.from(item).list(item.name, item.price); 
+//List<Tuple> result = query.from(item).list(new QTuple(item.name, item.price)); 
+// 같다.
+
+for (Tuple tuple : result) {
+ System.out.println("name = " + tuple.get(item.name)); 
+ System.out.println("price = " + tuple.get(item.price);
+}
+```
+
+빈 생성   
+쿼리 결과를 엔티티가 아닌 특정 객체로 받고 싶으면 빈 생성 기능을 사용한다.   
+
+- QueryDSL이 제공하는 객체 생성 방법
+  - 프로퍼티 접근
+  - 필드 직접 접근
+  - 생성자 사용
+   
+원하는 방법을 지정하기 위해 com.mysema.query.types.Projection를 사용하면 된다.   
+   
+```java
+public class ItemDTO {
+  private String username; 
+  private int price;
+
+  public ItemDTO() {}
+
+  public ItemDTO(String username, int price) {
+    this.username = username; 
+    this.price = price;
+  }
+
+  // Getter, Setter
+  public String getUsername() {… }
+  public void setUsername(String username) {...}
+  public int getPrice() {...}
+  public void setPrice(int price) {...}
+}
+```
+   
+```java
+// 프로퍼티 접근(Setter)
+Qltem item = Qltem.item;
+List<ItemDTO> result = query.from(item).list(
+  Projections.bean(ItemDTO.class, item.name.as("username"), item.price));
+```
+
+Projections.bean() 메서드는 수정자(Setter)를 사용해서 값을 채운다.   
+쿼리 결과는 name인데, ItemDTO는 username 프로퍼티를 가지고 있기에 as를 사용해서 별칭을 준다.   
+   
+```java
+// 필드 직접 접근
+Qltem item = Qltem.item;
+List<ItemDTO> result = query.from(item).list(
+  Projections.fields (ItemDTO.class, item.name.as ("username"), 
+  item.price));
+```
+Projections.fields() 메서드를 사용하면 필드에 직접 접근해서 값을 채워준다. 필드를 private로 설정해도 동작한다.   
+   
+```java
+// 생성자 사용
+Qltem item = Qltem.item;
+ List<ItemDTO> result = query.from(item).list (
+ Projections.constructor(ItemDTO,class, item.name, item.price)
+);
+```
+Projections.constructor() 메서드는 생성자를 사용한다. 물론 지정한 프로젝션과 파라미터 순서가 같은 생성자가 필요하다.   
+   
+DISTINCT   
+distinct는 ..   
+```
+ query.distinct().from(item)...
+```
+   
+### 10.4.10 수정, 삭제 배치 쿼리   
+QueryDSL도 수정, 삭제 같은 배치 쿼리를 지원한다.   
+   
+```java
+// 수정 배치 쿼리
+Qltem item = Qltem.item;
+JPAUpdateClause updateClause = new JPAUpdateClause(em, item); 
+long count = updateClause.where (item.name.eq("시골개발자의 JPA 책"))
+  .set(item.price, item.price.add(100)) // 상품의 가격을 100원씩 증가시킴
+  .execute() ;
+```
+-> **JPAUpdateClause**
+   
+```java
+// 삭제 배치 쿼리
+Qltem item = Qltem.item;
+JPADeleteClause deleteClause = new JPADeleteClause(em, item);
+long count = deleteClause.where (item.name.eq ("시골개발자의 JPA 책"))
+  .execute();
+```
+-> **JPADeleteClause**   
+   
+### 10.4.11 동적 쿼리   
+com.mysema.query.BooleanBuilder를 사용하면 특정 조건에 따른 동적 쿼리를 편리하게 생성할 수 있다.   
+   
+```java
+SearchParam param = new SearchParam();
+param.setName("시골개발자");
+param.setPrice(10000);
+
+Qltem item = Qltem.item;
+
+BooleanBuilder builder = new BooleanBuilder();
+if (StringUtils.hasText(param.getName())) {
+ builder.and(item.name.contains(param.getName()));
+}
+if (param.getPrice() != null) {
+  builder.and(item.price.gt(param.getPrice()));
+}
+List<Item> result = query.from(item)
+ .where(builder)
+ .list (item) ;
+```
+-> 상품 이름과 가격 유무에 따라 동적으로 쿼리를 생성   
+   
+### 10.4.12 메서드 위임   
+메서드 위임 기능을 사용하면 쿼리 타입에 검색 조건을 직접 정의할 수 있다.   
+   
+### 10.4.13 QueryDSL 정리   
+문자가 아닌 코드로 안전하게 쿼리 작성이 가능,   
+복작합 동적 쿼리 해결이 가능   
+   
