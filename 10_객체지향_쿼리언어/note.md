@@ -853,7 +853,7 @@ public void queryDSL() {
 - 기본 Q 생성   
 쿼리 타입(Q)은 사용하기 편리하도록 기본 인스턴스를 보관하고 있다.   
 하지만 같은 엔티티를 조인하거나 같은 엔티티를 서브쿼리에 사용하면 같은 별칭이 사용되므로 이때는 별칭을 직접 지정해서 사용해야 한다.   
-![image.jpg1](./images/10_16.JPG)
+![image.jpg1](./images/10_16.JPG)   
    
 ### 10.4.3 검색 조건 쿼리   
 ```java
@@ -1156,4 +1156,134 @@ List<Item> result = query.from(item)
 ### 10.4.13 QueryDSL 정리   
 문자가 아닌 코드로 안전하게 쿼리 작성이 가능,   
 복작합 동적 쿼리 해결이 가능   
+   
+## 10.5 네이티브 SQL   
+떄로는 특정 데이터베이스에 종속적인 기능이 필요하다.   
+   
+－ 특정 데이터베이스에 종속적인 기능일 지원하는 방법   
+- 특정 데이터베이스만 사용하는 함수
+  - JPQL에서 네이티브 SQL 함수를 호출할 수 있다
+  - 하이버네이트는 데이터베이스 방언에 각 데이터베이스에 종속적인 함수들을 정의해두었다. 또한 직접 호출할 함수를 정의할 수도 있다.
+  - 특정 데이터베이스만 지원하는 SQL 쿼리 힌트
+    - 하이버네이트를 포함한 몇몇 JPA 구현체들이 지원한다.
+  - 인라인 뷰, UNION, INSERSECT
+    - 하이브네이트는 지원하지 않지만 일부 JPA 구현체들이 지원한다.
+  - 스토어 프로시저
+    - JPQL에서 스토어드 프로시저를 호출할 수 있다.
+  - 특정 데이터베이스만 지원하는 문법
+    - 오라클의 CONNECT BY처럼 특정 데이터베이스에 너무 종속적인 SQL문법은 지원하지는 않는다. 이때는 네이티브 SQL을 사용해야 한다.
+   
+네이티브 SQL: 다양한 이유로 JPQL을 사용할 수 없을 때 SQL을 직접 사용하도록 JPQL이 지원하는 기능   
+네이비트 SQL을 사용하면 엔티티를 조회할 수 있고 JPA가 지원하는 영속성 컨텍스트의 기능을 그대로 사용할 수 있다.   
+   
+### 10.5.1 네이티브 SQL 사용   
+네이티브 쿼리 API의 3가지 종류   
+```
+ // 결과 타입 정의
+public Query createNativeQuery(String sqlString, Class resultClass);
+
+// 결과 타입을 정의할 수 없을 때
+public Query createNativeQuery(String sqlString);
+
+public Query createNativeQuery(String sqlString,
+   String resultSetMapping); // 결과 매핑 사용
+```
+   
+- 엔티티 조회   
+네이티브 SQL은 em.createNativeQuery(SQL, 결과클래스)를 사용한다.   
+첫 번째 파라미터: 네이티브 SQL 입력   
+두 번쨰 파라미터: 조회할 엔티티 클래스의 타입을 입력   
+   
+```java
+//SQL 정의 
+String sql =
+ "SELECT ID, AGE, NAME, TEAM_ID" + 
+  "FROM MEMBER WHERE AGE > ?";
+
+Query nativeQuery = em.createNativeQuery(sql, Member.class) 
+  .setParameter(1, 20);
+
+List<Member> resultList = nativeQuery.getResultList();
+```
+* 네이티브 sql로 sql만 직접 사용할 뿐이지 나머지는 jpql을 사용할 때와 같고, 조회한 엔티티도 영속성 컨텍스트에서 관리한다.
+   
+- 값 조회   
+```java
+// 값 조회
+//SQL 정의 
+String sql =
+ "SELECT ID, AGE, NAME, TEAM_ID " + 
+  "FROM MEMBER WHERE AGE > ?";
+
+Query nativeQuery = em.createNativeQuery(sql)
+.setParameter(1, 10);
+
+List<Object[]> resultList = nativeQuery.getResultList(); 
+for (Object[] row : resultList) {
+ System.out.println("id = " + row[0]);
+ System.out.println("age = " + row[1]);
+ System.out.println ("name = " + row [2]) ;
+ System.out.println("team_id = " + row[3]);
+}
+```
+여러 값을 조회하려면 em.createNativeQuery(SQL)의 두 번째 파라미터 사용X   
+-> JPA는 조회한 값들을 Object[]에 담아서 관리한다.   
+   
+- 결과 매핑 사용
+엔티티와 스칼라 값을 함께 조회하는 것처럼 매핑이 복잡해지면 @SqlResultSetMapping을 정의해서 결과 매핑을 사용해야함
+   
+```java
+// 결과 매핑 사용
+//SQL 정의 
+String sql =
+ "SELECT M.ID, AGE, NAME, TEAM_ID, I.ORDER_COUNT " + 
+  ",FROM MEMBER M " +
+  "LEFT JOIN " +
+ " (SELECT IM.ID, COUNT (*) AS ORDER_COUNT " +
+ " FROM ORDERS O, MEMBER IM " +
+ " WHERE O.MEMBER_ID = IM.ID) I " +
+ "ON M.ID = I,ID";
+
+ Query nativeQuery = em.createNativeQuery(sql, "memberWithOrderCount");
+
+ListcObject[]> resultList = nativeQuery.getResultList(); 
+for (Object[] row : resultList) {
+ Member member = (Member) row[0];
+ Biglnteger orderCount = (Biglnteger)row[l];
+
+ System.out.println("member = ", + member);
+ System.out.printIn("orderCount = " + orderCount);
+```
+em.createNativeQuery(sql, "memberWithOrderCount")의 두 번째 파라미터에 결과 매핑 정보의 이름이 사용되었다.   
+   
+```java
+// 결과 매핑을 정의
+@Entity
+@SqlResultSetMapping (name = "memberWithOrderCount",
+  entities = {@EntityResult(entityClass = Member.class)}, 
+  columns = {@ColumnResult(name = :ORDER_COUNT")}
+ )
+ public class Member {...}
+```
+memberWithOrderCount의 결과 매핑을 잘 보면, 회원 엔티티와 ORDER_COUNT 컬럼을 매핑했음   
+ID, AGE, NAME, TEAM_ID는 Member 엔티티와 매핑하고, ORDER_COUNT는 단순 값으로 매핑한다.   
+   
+결과 매핑 어노테이션   
+![image.jpg1](./images/10_17.JPG)   
+   
+### 10.5.4 네이티브 SQL 정리   
+네이티브 SQL도 JPQL을 사용할 때와 마찬가지로 Query, TypeQuery(Named 네이티브 쿼리의 경우에만)를 반환한다.   
+-> JPQL의 API를 그대로 사용할 수 있다.   
+   
+```java
+// 네이티브 SQL과 페이징 처리
+String sql = "SELECT ID, AGE, NAME, TEAM_ID FROM MEMBER"; 
+Query nativeQuery = em.createNativeQuery(sql, Member.class) 
+ .setFirstResult(10)
+ .setMaxResults(20)
+```
+-> 페이징 처리 API를 사용할 수 있다.   
+   
+네이티브 SQL은 관리하기 쉽지 않고 자주 사용하면 특정 데이터베이스에 종속적인 쿼리가 증가해서 이식성이 떨어진다.   
+하지만 아예 사용하지 않는 것은 불가능하고, 차선책으로 사용하도록 하자.   
    
